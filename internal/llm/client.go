@@ -2,14 +2,16 @@ package llm
 
 import (
 	"context"
+	"os"
 )
 
 // Provider identifies an LLM provider
 type Provider string
 
 const (
-	ProviderClaude Provider = "claude"
-	ProviderOllama Provider = "ollama"
+	ProviderClaude     Provider = "claude"
+	ProviderClaudeCode Provider = "claude-code"
+	ProviderOllama     Provider = "ollama"
 )
 
 // Client defines the interface for LLM operations
@@ -66,22 +68,12 @@ type ExtractedTask struct {
 	Tags []string `json:"tags,omitempty"`
 }
 
-// AuthMethod specifies how to authenticate with the LLM provider
-type AuthMethod string
-
-const (
-	AuthMethodAPIKey AuthMethod = "api_key"
-	AuthMethodOAuth  AuthMethod = "oauth"
-)
-
 // Config holds LLM configuration
 type Config struct {
-	Provider   Provider
-	AuthMethod AuthMethod
-	APIKey     string
-	OAuthToken string
-	Model      string
-	BaseURL    string // For Ollama or custom endpoints
+	Provider Provider
+	APIKey   string
+	Model    string
+	BaseURL  string // For Ollama or custom endpoints
 }
 
 // NewClient creates a new LLM client based on configuration
@@ -89,9 +81,35 @@ func NewClient(cfg Config) (Client, error) {
 	switch cfg.Provider {
 	case ProviderClaude:
 		return NewClaudeClient(cfg)
+	case ProviderClaudeCode:
+		return NewClaudeCodeClient(cfg.Model)
 	case ProviderOllama:
 		return NewOllamaClient(cfg.BaseURL, cfg.Model)
 	default:
 		return NewClaudeClient(cfg)
 	}
+}
+
+// NewClientWithFallback creates a client, preferring Claude Code CLI when no explicit API key is set
+func NewClientWithFallback(cfg Config) (Client, error) {
+	// If explicit API key is provided, use the standard Claude API
+	if cfg.APIKey != "" || cfg.Provider == ProviderOllama {
+		return NewClient(cfg)
+	}
+
+	// Check environment variables for API key
+	if os.Getenv("ANTHROPIC_API_KEY") != "" || os.Getenv("CLAUDE_API_KEY") != "" {
+		return NewClient(cfg)
+	}
+
+	// No explicit API key - prefer Claude Code CLI if available
+	// (OAuth tokens from keychain can't be used with the public API)
+	if cfg.Provider == ProviderClaude || cfg.Provider == "" {
+		if codeClient, err := NewClaudeCodeClient(cfg.Model); err == nil {
+			return codeClient, nil
+		}
+	}
+
+	// Fall back to standard client (will show appropriate error for missing credentials)
+	return NewClient(cfg)
 }

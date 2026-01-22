@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -19,31 +18,19 @@ type ClaudeClient struct {
 	model  string
 }
 
-// NewClaudeClient creates a new Claude client with support for multiple auth methods
+// NewClaudeClient creates a new Claude client
 func NewClaudeClient(cfg Config) (*ClaudeClient, error) {
 	model := cfg.Model
 	if model == "" {
 		model = "claude-sonnet-4-20250514"
 	}
 
-	// Try to get credentials in order of priority
-	apiKey, authMethod, err := resolveClaudeCredentials(cfg)
+	apiKey, err := resolveClaudeCredentials(cfg)
 	if err != nil {
 		return nil, err
 	}
 
-	var opts []option.RequestOption
-
-	switch authMethod {
-	case AuthMethodOAuth:
-		// OAuth uses Authorization: Bearer header
-		opts = append(opts, option.WithHeader("Authorization", "Bearer "+apiKey))
-	default:
-		// Standard API key authentication
-		opts = append(opts, option.WithAPIKey(apiKey))
-	}
-
-	client := anthropic.NewClient(opts...)
+	client := anthropic.NewClient(option.WithAPIKey(apiKey))
 
 	return &ClaudeClient{
 		client: client,
@@ -51,196 +38,44 @@ func NewClaudeClient(cfg Config) (*ClaudeClient, error) {
 	}, nil
 }
 
-// resolveClaudeCredentials finds credentials from various sources
-func resolveClaudeCredentials(cfg Config) (string, AuthMethod, error) {
+// resolveClaudeCredentials finds API key from various sources
+func resolveClaudeCredentials(cfg Config) (string, error) {
 	// 1. Explicit API key in config
 	if cfg.APIKey != "" {
-		return cfg.APIKey, AuthMethodAPIKey, nil
+		return cfg.APIKey, nil
 	}
 
-	// 2. Explicit OAuth token in config
-	if cfg.OAuthToken != "" {
-		return cfg.OAuthToken, AuthMethodOAuth, nil
-	}
-
-	// 3. Environment variables
+	// 2. Environment variables
 	if key := os.Getenv("ANTHROPIC_API_KEY"); key != "" {
-		return key, AuthMethodAPIKey, nil
+		return key, nil
 	}
 	if key := os.Getenv("CLAUDE_API_KEY"); key != "" {
-		return key, AuthMethodAPIKey, nil
+		return key, nil
 	}
 
-	// 4. Claude Max OAuth token from Claude Code or Claude Desktop
-	if token, err := findClaudeOAuthToken(); err == nil && token != "" {
-		return token, AuthMethodOAuth, nil
-	}
-
-	// 5. Credentials file (~/.config/anthropic/credentials)
+	// 3. Credentials file (~/.config/anthropic/credentials)
 	if key, err := readCredentialsFile(); err == nil && key != "" {
-		return key, AuthMethodAPIKey, nil
+		return key, nil
 	}
 
-	return "", "", fmt.Errorf(`no Claude credentials found
+	return "", fmt.Errorf(`no Claude API key found
 
-To use Claude, provide credentials via one of these methods:
+To use Claude, provide an API key via one of these methods:
 
-1. API Key (works with Claude Max or API plans):
-   - Set ANTHROPIC_API_KEY environment variable
-   - Or add to ~/.reorg/config.yaml:
-     llm:
-       api_key: your-key-here
+1. Environment variable:
+   export ANTHROPIC_API_KEY="sk-ant-..."
 
-   Get your API key from: https://console.anthropic.com/settings/keys
+2. Config file (~/.reorg/config.yaml):
+   llm:
+     api_key: sk-ant-...
 
-2. OAuth (Claude Max subscription):
-   - Log in with Claude Code CLI: claude login
-   - Your OAuth session will be shared automatically
+3. Credentials file (~/.config/anthropic/credentials):
+   Create the file with your API key
 
-3. Credentials file:
-   - Create ~/.config/anthropic/credentials with your API key`)
-}
+Get your API key from https://console.anthropic.com/settings/keys
 
-// findClaudeOAuthToken looks for OAuth tokens from Claude Code or Claude Desktop
-func findClaudeOAuthToken() (string, error) {
-	// On macOS, check the keychain first (where Claude Code stores credentials)
-	if token, err := findKeychainCredentials(); err == nil && token != "" {
-		return token, nil
-	}
-
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "", err
-	}
-
-	// Check Claude Code OAuth token locations (fallback for file-based storage)
-	tokenPaths := []string{
-		filepath.Join(home, ".claude", "oauth_token"),
-		filepath.Join(home, ".claude", "credentials.json"),
-		filepath.Join(home, ".config", "claude", "oauth_token"),
-		filepath.Join(home, "Library", "Application Support", "Claude", "oauth_token"),
-	}
-
-	for _, path := range tokenPaths {
-		if data, err := os.ReadFile(path); err == nil {
-			token := strings.TrimSpace(string(data))
-			if token != "" {
-				// Handle JSON format if needed
-				if strings.HasPrefix(token, "{") {
-					var creds struct {
-						AccessToken string `json:"access_token"`
-						Token       string `json:"token"`
-						APIKey      string `json:"api_key"`
-					}
-					if json.Unmarshal(data, &creds) == nil {
-						if creds.AccessToken != "" {
-							return creds.AccessToken, nil
-						}
-						if creds.Token != "" {
-							return creds.Token, nil
-						}
-						if creds.APIKey != "" {
-							return creds.APIKey, nil
-						}
-					}
-				}
-				return token, nil
-			}
-		}
-	}
-
-	return "", fmt.Errorf("no OAuth token found")
-}
-
-// findKeychainCredentials reads Claude credentials from macOS keychain
-func findKeychainCredentials() (string, error) {
-	// Get current username for keychain lookup
-	currentUser := os.Getenv("USER")
-	if currentUser == "" {
-		currentUser = os.Getenv("LOGNAME")
-	}
-
-	// Try Claude Code credentials with username
-	if currentUser != "" {
-		token, err := readFromKeychainWithAccount("Claude Code-credentials", currentUser)
-		if err == nil && token != "" {
-			return token, nil
-		}
-	}
-
-	// Try different keychain service names used by Claude Code
-	keychainServices := []string{
-		"Claude Code-credentials",
-		"claude-code-credentials",
-		"anthropic",
-		"claude",
-	}
-
-	for _, service := range keychainServices {
-		token, err := readFromKeychain(service)
-		if err == nil && token != "" {
-			return token, nil
-		}
-	}
-
-	return "", fmt.Errorf("no keychain credentials found")
-}
-
-// readFromKeychainWithAccount reads a password from macOS keychain with specific account
-func readFromKeychainWithAccount(service, account string) (string, error) {
-	cmd := exec.Command("security", "find-generic-password", "-s", service, "-a", account, "-w")
-	output, err := cmd.Output()
-	if err != nil {
-		return "", err
-	}
-
-	return parseKeychainOutput(string(output))
-}
-
-// readFromKeychain reads a password from macOS keychain using security command
-func readFromKeychain(service string) (string, error) {
-	cmd := exec.Command("security", "find-generic-password", "-s", service, "-w")
-	output, err := cmd.Output()
-	if err != nil {
-		return "", err
-	}
-
-	return parseKeychainOutput(string(output))
-}
-
-// parseKeychainOutput extracts the OAuth token from keychain data
-func parseKeychainOutput(output string) (string, error) {
-	token := strings.TrimSpace(output)
-	if token == "" {
-		return "", fmt.Errorf("empty token")
-	}
-
-	// The keychain stores JSON with Claude OAuth credentials
-	if strings.HasPrefix(token, "{") {
-		// Try Claude Code format: {"claudeAiOauth":{"accessToken":"..."}}
-		var claudeCodeCreds struct {
-			ClaudeAiOauth struct {
-				AccessToken  string `json:"accessToken"`
-				RefreshToken string `json:"refreshToken"`
-				ExpiresAt    string `json:"expiresAt"`
-			} `json:"claudeAiOauth"`
-		}
-		if json.Unmarshal([]byte(token), &claudeCodeCreds) == nil && claudeCodeCreds.ClaudeAiOauth.AccessToken != "" {
-			return claudeCodeCreds.ClaudeAiOauth.AccessToken, nil
-		}
-
-		// Try simple format: {"accessToken":"..."}
-		var simpleCreds struct {
-			AccessToken  string `json:"accessToken"`
-			RefreshToken string `json:"refreshToken"`
-			ExpiresAt    string `json:"expiresAt"`
-		}
-		if json.Unmarshal([]byte(token), &simpleCreds) == nil && simpleCreds.AccessToken != "" {
-			return simpleCreds.AccessToken, nil
-		}
-	}
-
-	return token, nil
+Note: If you have Claude Code installed and logged in, reorg will
+automatically use it as a fallback when no API key is configured`)
 }
 
 // readCredentialsFile reads API key from credentials file

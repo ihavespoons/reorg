@@ -98,24 +98,20 @@ func getLLMClient() (llm.Client, error) {
 	provider := viper.GetString("llm.provider")
 	model := viper.GetString("llm.model")
 	baseURL := viper.GetString("llm.base_url")
-
-	// Get credentials from config (Claude client will also check env vars and OAuth)
 	apiKey := viper.GetString("llm.api_key")
-	oauthToken := viper.GetString("llm.oauth_token")
 
 	cfg := llm.Config{
-		Provider:   llm.Provider(provider),
-		APIKey:     apiKey,
-		OAuthToken: oauthToken,
-		Model:      model,
-		BaseURL:    baseURL,
+		Provider: llm.Provider(provider),
+		APIKey:   apiKey,
+		Model:    model,
+		BaseURL:  baseURL,
 	}
 
 	if cfg.Provider == "" {
 		cfg.Provider = llm.ProviderClaude
 	}
 
-	return llm.NewClient(cfg)
+	return llm.NewClientWithFallback(cfg)
 }
 
 func runImportNotes(cmd *cobra.Command, args []string) error {
