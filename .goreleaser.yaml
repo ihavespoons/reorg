@@ -1,0 +1,75 @@
+version: 2
+
+project_name: reorg
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: reorg
+    main: ./cmd/reorg
+    binary: reorg
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+      - -X main.date={{.Date}}
+
+archives:
+  - id: default
+    formats:
+      - tar.gz
+    format_overrides:
+      - goos: windows
+        formats:
+          - zip
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - README.md
+      - LICENSE*
+
+checksum:
+  name_template: "checksums.txt"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+      - Merge pull request
+      - Merge branch
+
+brews:
+  - name: reorg
+    repository:
+      owner: ihavespoons
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+    directory: Formula
+    homepage: "https://github.com/beng/reorg"
+    description: "Personal organization tool for managing areas, projects, and tasks"
+    license: "MIT"
+    install: |
+      bin.install "reorg"
+    test: |
+      system "#{bin}/reorg", "--help"
+
+release:
+  github:
+    owner: beng
+    name: reorg
+  draft: false
+  prerelease: auto
+  name_template: "v{{.Version}}"

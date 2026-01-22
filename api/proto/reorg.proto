@@ -1,0 +1,337 @@
+syntax = "proto3";
+
+package reorg.v1;
+
+option go_package = "github.com/beng/reorg/api/proto/reorgpb";
+
+import "google/protobuf/timestamp.proto";
+import "google/api/annotations.proto";
+
+// ReorgService provides all operations for managing areas, projects, and tasks
+service ReorgService {
+  // Area operations
+  rpc CreateArea(CreateAreaRequest) returns (CreateAreaResponse) {
+    option (google.api.http) = {
+      post: "/v1/areas"
+      body: "*"
+    };
+  }
+  rpc GetArea(GetAreaRequest) returns (GetAreaResponse) {
+    option (google.api.http) = {
+      get: "/v1/areas/{id}"
+    };
+  }
+  rpc ListAreas(ListAreasRequest) returns (ListAreasResponse) {
+    option (google.api.http) = {
+      get: "/v1/areas"
+    };
+  }
+  rpc UpdateArea(UpdateAreaRequest) returns (UpdateAreaResponse) {
+    option (google.api.http) = {
+      put: "/v1/areas/{area.id}"
+      body: "*"
+    };
+  }
+  rpc DeleteArea(DeleteAreaRequest) returns (DeleteAreaResponse) {
+    option (google.api.http) = {
+      delete: "/v1/areas/{id}"
+    };
+  }
+
+  // Project operations
+  rpc CreateProject(CreateProjectRequest) returns (CreateProjectResponse) {
+    option (google.api.http) = {
+      post: "/v1/projects"
+      body: "*"
+    };
+  }
+  rpc GetProject(GetProjectRequest) returns (GetProjectResponse) {
+    option (google.api.http) = {
+      get: "/v1/projects/{id}"
+    };
+  }
+  rpc ListProjects(ListProjectsRequest) returns (ListProjectsResponse) {
+    option (google.api.http) = {
+      get: "/v1/projects"
+    };
+  }
+  rpc UpdateProject(UpdateProjectRequest) returns (UpdateProjectResponse) {
+    option (google.api.http) = {
+      put: "/v1/projects/{project.id}"
+      body: "*"
+    };
+  }
+  rpc DeleteProject(DeleteProjectRequest) returns (DeleteProjectResponse) {
+    option (google.api.http) = {
+      delete: "/v1/projects/{id}"
+    };
+  }
+  rpc CompleteProject(CompleteProjectRequest) returns (CompleteProjectResponse) {
+    option (google.api.http) = {
+      post: "/v1/projects/{id}/complete"
+    };
+  }
+
+  // Task operations
+  rpc CreateTask(CreateTaskRequest) returns (CreateTaskResponse) {
+    option (google.api.http) = {
+      post: "/v1/tasks"
+      body: "*"
+    };
+  }
+  rpc GetTask(GetTaskRequest) returns (GetTaskResponse) {
+    option (google.api.http) = {
+      get: "/v1/tasks/{id}"
+    };
+  }
+  rpc ListTasks(ListTasksRequest) returns (ListTasksResponse) {
+    option (google.api.http) = {
+      get: "/v1/tasks"
+    };
+  }
+  rpc UpdateTask(UpdateTaskRequest) returns (UpdateTaskResponse) {
+    option (google.api.http) = {
+      put: "/v1/tasks/{task.id}"
+      body: "*"
+    };
+  }
+  rpc DeleteTask(DeleteTaskRequest) returns (DeleteTaskResponse) {
+    option (google.api.http) = {
+      delete: "/v1/tasks/{id}"
+    };
+  }
+  rpc StartTask(StartTaskRequest) returns (StartTaskResponse) {
+    option (google.api.http) = {
+      post: "/v1/tasks/{id}/start"
+    };
+  }
+  rpc CompleteTask(CompleteTaskRequest) returns (CompleteTaskResponse) {
+    option (google.api.http) = {
+      post: "/v1/tasks/{id}/complete"
+    };
+  }
+}
+
+// Domain types
+
+message Area {
+  string id = 1;
+  string title = 2;
+  string content = 3;
+  repeated string tags = 4;
+  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp updated_at = 6;
+}
+
+message Project {
+  string id = 1;
+  string title = 2;
+  string area_id = 3;
+  string content = 4;
+  ProjectStatus status = 5;
+  repeated string tags = 6;
+  google.protobuf.Timestamp due_date = 7;
+  google.protobuf.Timestamp created_at = 8;
+  google.protobuf.Timestamp updated_at = 9;
+  google.protobuf.Timestamp completed_at = 10;
+}
+
+enum ProjectStatus {
+  PROJECT_STATUS_UNSPECIFIED = 0;
+  PROJECT_STATUS_ACTIVE = 1;
+  PROJECT_STATUS_ON_HOLD = 2;
+  PROJECT_STATUS_COMPLETED = 3;
+  PROJECT_STATUS_ARCHIVED = 4;
+}
+
+message Task {
+  string id = 1;
+  string title = 2;
+  string project_id = 3;
+  string area_id = 4;
+  string content = 5;
+  TaskStatus status = 6;
+  Priority priority = 7;
+  repeated string tags = 8;
+  google.protobuf.Timestamp due_date = 9;
+  google.protobuf.Timestamp scheduled_date = 10;
+  repeated string dependencies = 11;
+  int32 estimated_minutes = 12;
+  int32 actual_minutes = 13;
+  google.protobuf.Timestamp created_at = 14;
+  google.protobuf.Timestamp updated_at = 15;
+  google.protobuf.Timestamp started_at = 16;
+  google.protobuf.Timestamp completed_at = 17;
+}
+
+enum TaskStatus {
+  TASK_STATUS_UNSPECIFIED = 0;
+  TASK_STATUS_TODO = 1;
+  TASK_STATUS_IN_PROGRESS = 2;
+  TASK_STATUS_BLOCKED = 3;
+  TASK_STATUS_DONE = 4;
+  TASK_STATUS_CANCELLED = 5;
+}
+
+enum Priority {
+  PRIORITY_UNSPECIFIED = 0;
+  PRIORITY_LOW = 1;
+  PRIORITY_MEDIUM = 2;
+  PRIORITY_HIGH = 3;
+  PRIORITY_URGENT = 4;
+}
+
+// Area requests/responses
+
+message CreateAreaRequest {
+  string title = 1;
+  string content = 2;
+  repeated string tags = 3;
+}
+
+message CreateAreaResponse {
+  Area area = 1;
+}
+
+message GetAreaRequest {
+  string id = 1;
+}
+
+message GetAreaResponse {
+  Area area = 1;
+}
+
+message ListAreasRequest {}
+
+message ListAreasResponse {
+  repeated Area areas = 1;
+}
+
+message UpdateAreaRequest {
+  Area area = 1;
+}
+
+message UpdateAreaResponse {
+  Area area = 1;
+}
+
+message DeleteAreaRequest {
+  string id = 1;
+}
+
+message DeleteAreaResponse {}
+
+// Project requests/responses
+
+message CreateProjectRequest {
+  string title = 1;
+  string area_id = 2;
+  string content = 3;
+  repeated string tags = 4;
+  google.protobuf.Timestamp due_date = 5;
+}
+
+message CreateProjectResponse {
+  Project project = 1;
+}
+
+message GetProjectRequest {
+  string id = 1;
+}
+
+message GetProjectResponse {
+  Project project = 1;
+}
+
+message ListProjectsRequest {
+  string area_id = 1;  // Optional: filter by area
+}
+
+message ListProjectsResponse {
+  repeated Project projects = 1;
+}
+
+message UpdateProjectRequest {
+  Project project = 1;
+}
+
+message UpdateProjectResponse {
+  Project project = 1;
+}
+
+message DeleteProjectRequest {
+  string id = 1;
+}
+
+message DeleteProjectResponse {}
+
+message CompleteProjectRequest {
+  string id = 1;
+}
+
+message CompleteProjectResponse {
+  Project project = 1;
+}
+
+// Task requests/responses
+
+message CreateTaskRequest {
+  string title = 1;
+  string project_id = 2;
+  string area_id = 3;
+  string content = 4;
+  Priority priority = 5;
+  repeated string tags = 6;
+  google.protobuf.Timestamp due_date = 7;
+}
+
+message CreateTaskResponse {
+  Task task = 1;
+}
+
+message GetTaskRequest {
+  string id = 1;
+}
+
+message GetTaskResponse {
+  Task task = 1;
+}
+
+message ListTasksRequest {
+  string project_id = 1;  // Optional: filter by project
+  string area_id = 2;     // Optional: filter by area
+}
+
+message ListTasksResponse {
+  repeated Task tasks = 1;
+}
+
+message UpdateTaskRequest {
+  Task task = 1;
+}
+
+message UpdateTaskResponse {
+  Task task = 1;
+}
+
+message DeleteTaskRequest {
+  string id = 1;
+}
+
+message DeleteTaskResponse {}
+
+message StartTaskRequest {
+  string id = 1;
+}
+
+message StartTaskResponse {
+  Task task = 1;
+}
+
+message CompleteTaskRequest {
+  string id = 1;
+}
+
+message CompleteTaskResponse {
+  Task task = 1;
+}
