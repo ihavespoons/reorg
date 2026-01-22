@@ -8,9 +8,9 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	pb "github.com/beng/reorg/api/proto/gen"
-	"github.com/beng/reorg/internal/domain"
-	"github.com/beng/reorg/internal/service"
+	pb "github.com/ihavespoons/reorg/api/proto/gen"
+	"github.com/ihavespoons/reorg/internal/domain"
+	"github.com/ihavespoons/reorg/internal/service"
 )
 
 // RemoteClient implements ReorgClient by connecting via gRPC

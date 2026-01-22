@@ -7,9 +7,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/beng/reorg/internal/domain"
-	"github.com/beng/reorg/internal/storage"
-	"github.com/beng/reorg/internal/storage/git"
+	"github.com/ihavespoons/reorg/internal/domain"
+	"github.com/ihavespoons/reorg/internal/storage"
+	"github.com/ihavespoons/reorg/internal/storage/git"
 )
 
 // Store provides file-based storage for all domain objects

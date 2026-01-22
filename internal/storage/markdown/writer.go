@@ -7,7 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/beng/reorg/internal/domain"
+	"github.com/ihavespoons/reorg/internal/domain"
 )
 
 // Writer handles writing domain objects to markdown files

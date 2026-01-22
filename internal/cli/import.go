@@ -15,10 +15,10 @@ import (
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 
-	"github.com/beng/reorg/internal/domain"
-	"github.com/beng/reorg/internal/integrations/apple_notes"
-	"github.com/beng/reorg/internal/integrations/obsidian"
-	"github.com/beng/reorg/internal/llm"
+	"github.com/ihavespoons/reorg/internal/domain"
+	"github.com/ihavespoons/reorg/internal/integrations/apple_notes"
+	"github.com/ihavespoons/reorg/internal/integrations/obsidian"
+	"github.com/ihavespoons/reorg/internal/llm"
 )
 
 var (

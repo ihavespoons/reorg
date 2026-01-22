@@ -9,7 +9,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
-	pb "github.com/beng/reorg/api/proto/gen"
+	pb "github.com/ihavespoons/reorg/api/proto/gen"
 )
 
 // Gateway provides a REST API via gRPC-Gateway

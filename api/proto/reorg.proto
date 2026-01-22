@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package reorg.v1;
 
-option go_package = "github.com/beng/reorg/api/proto/reorgpb";
+option go_package = "github.com/ihavespoons/reorg/api/proto/reorgpb";
 
 import "google/protobuf/timestamp.proto";
 import "google/api/annotations.proto";

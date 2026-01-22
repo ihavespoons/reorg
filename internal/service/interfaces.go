@@ -3,7 +3,7 @@ package service
 import (
 	"context"
 
-	"github.com/beng/reorg/internal/domain"
+	"github.com/ihavespoons/reorg/internal/domain"
 )
 
 // ReorgClient is the key abstraction enabling embedded/remote modes.

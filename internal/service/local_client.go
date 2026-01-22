@@ -3,8 +3,8 @@ package service
 import (
 	"context"
 
-	"github.com/beng/reorg/internal/domain"
-	"github.com/beng/reorg/internal/storage/markdown"
+	"github.com/ihavespoons/reorg/internal/domain"
+	"github.com/ihavespoons/reorg/internal/storage/markdown"
 )
 
 // LocalClient implements ReorgClient by embedding services directly.

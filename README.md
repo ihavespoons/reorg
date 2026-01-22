@@ -23,7 +23,7 @@ brew install reorg
 ### From Source
 
 ```bash
-git clone https://github.com/beng/reorg.git
+git clone https://github.com/ihavespoons/reorg.git
 cd reorg
 go build -o reorg ./cmd/reorg
 sudo mv reorg /usr/local/bin/

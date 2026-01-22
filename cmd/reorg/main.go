@@ -1,6 +1,6 @@
 package main
 
-import "github.com/beng/reorg/internal/cli"
+import "github.com/ihavespoons/reorg/internal/cli"
 
 // These variables are set by GoReleaser at build time
 var (

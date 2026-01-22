@@ -9,7 +9,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/cobra"
 
-	"github.com/beng/reorg/internal/domain"
+	"github.com/ihavespoons/reorg/internal/domain"
 )
 
 var areaCmd = &cobra.Command{

@@ -3,7 +3,7 @@ package storage
 import (
 	"context"
 
-	"github.com/beng/reorg/internal/domain"
+	"github.com/ihavespoons/reorg/internal/domain"
 )
 
 // AreaRepository defines operations for storing and retrieving Areas

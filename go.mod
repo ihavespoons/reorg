@@ -1,4 +1,4 @@
-module github.com/beng/reorg
+module github.com/ihavespoons/reorg
 
 go 1.25.1
 

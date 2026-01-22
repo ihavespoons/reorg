@@ -8,9 +8,9 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	apiclient "github.com/beng/reorg/internal/api/client"
-	"github.com/beng/reorg/internal/service"
-	"github.com/beng/reorg/internal/storage/markdown"
+	apiclient "github.com/ihavespoons/reorg/internal/api/client"
+	"github.com/ihavespoons/reorg/internal/service"
+	"github.com/ihavespoons/reorg/internal/storage/markdown"
 )
 
 var (

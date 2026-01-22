@@ -10,7 +10,7 @@ import (
 	"github.com/adrg/frontmatter"
 	"gopkg.in/yaml.v3"
 
-	"github.com/beng/reorg/internal/domain"
+	"github.com/ihavespoons/reorg/internal/domain"
 )
 
 // Parser handles reading and writing markdown files with YAML frontmatter

@@ -10,9 +10,9 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	pb "github.com/beng/reorg/api/proto/gen"
-	"github.com/beng/reorg/internal/domain"
-	"github.com/beng/reorg/internal/service"
+	pb "github.com/ihavespoons/reorg/api/proto/gen"
+	"github.com/ihavespoons/reorg/internal/domain"
+	"github.com/ihavespoons/reorg/internal/service"
 )
 
 // Server implements the gRPC ReorgService

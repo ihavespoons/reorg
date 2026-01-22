@@ -10,10 +10,10 @@ import (
 
 	"github.com/spf13/cobra"
 
-	grpcserver "github.com/beng/reorg/internal/api/grpc"
-	"github.com/beng/reorg/internal/api/rest"
-	"github.com/beng/reorg/internal/service"
-	"github.com/beng/reorg/internal/storage/markdown"
+	grpcserver "github.com/ihavespoons/reorg/internal/api/grpc"
+	"github.com/ihavespoons/reorg/internal/api/rest"
+	"github.com/ihavespoons/reorg/internal/service"
+	"github.com/ihavespoons/reorg/internal/storage/markdown"
 )
 
 var (
