@@ -75,9 +75,9 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&serverAddress, "server", "", "server address for remote mode (default is localhost:50051)")
 
 	// Bind flags to viper
-	viper.BindPFlag("data_dir", rootCmd.PersistentFlags().Lookup("data-dir"))
-	viper.BindPFlag("mode", rootCmd.PersistentFlags().Lookup("mode"))
-	viper.BindPFlag("server.address", rootCmd.PersistentFlags().Lookup("server"))
+	_ = viper.BindPFlag("data_dir", rootCmd.PersistentFlags().Lookup("data-dir"))
+	_ = viper.BindPFlag("mode", rootCmd.PersistentFlags().Lookup("mode"))
+	_ = viper.BindPFlag("server.address", rootCmd.PersistentFlags().Lookup("server"))
 }
 
 // initConfig reads in config file and ENV variables if set.

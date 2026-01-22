@@ -67,23 +67,22 @@ func runAreaList(cmd *cobra.Command, args []string) error {
 	}
 
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(w, "NAME\tPROJECTS\tCREATED")
-	fmt.Fprintln(w, "----\t--------\t-------")
+	_, _ = fmt.Fprintln(w, "NAME\tPROJECTS\tCREATED")
+	_, _ = fmt.Fprintln(w, "----\t--------\t-------")
 
 	for _, area := range areas {
 		// Count projects
 		projects, _ := client.ListProjects(ctx, area.ID)
 		projectCount := len(projects)
 
-		fmt.Fprintf(w, "%s\t%d\t%s\n",
+		_, _ = fmt.Fprintf(w, "%s\t%d\t%s\n",
 			area.Title,
 			projectCount,
 			area.Created.Format("2006-01-02"),
 		)
 	}
 
-	w.Flush()
-	return nil
+	return w.Flush()
 }
 
 func runAreaCreate(cmd *cobra.Command, args []string) error {

@@ -107,8 +107,8 @@ func runProjectList(cmd *cobra.Command, args []string) error {
 	}
 
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(w, "PROJECT\tAREA\tSTATUS\tPRIORITY\tTASKS")
-	fmt.Fprintln(w, "-------\t----\t------\t--------\t-----")
+	_, _ = fmt.Fprintln(w, "PROJECT\tAREA\tSTATUS\tPRIORITY\tTASKS")
+	_, _ = fmt.Fprintln(w, "-------\t----\t------\t--------\t-----")
 
 	for _, p := range projects {
 		// Get area name
@@ -128,7 +128,7 @@ func runProjectList(cmd *cobra.Command, args []string) error {
 		}
 		taskStr := fmt.Sprintf("%d/%d", completedTasks, len(tasks))
 
-		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n",
+		_, _ = fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n",
 			p.Title,
 			areaName,
 			p.Status,
@@ -137,8 +137,7 @@ func runProjectList(cmd *cobra.Command, args []string) error {
 		)
 	}
 
-	w.Flush()
-	return nil
+	return w.Flush()
 }
 
 func runProjectCreate(cmd *cobra.Command, args []string) error {

@@ -130,7 +130,7 @@ func runImportNotes(cmd *cobra.Command, args []string) error {
 	if strings.HasSuffix(importSinceFlag, "d") {
 		days := strings.TrimSuffix(importSinceFlag, "d")
 		var d int
-		fmt.Sscanf(days, "%d", &d)
+		_, _ = fmt.Sscanf(days, "%d", &d)
 		since = time.Duration(d) * 24 * time.Hour
 	} else {
 		since, err = time.ParseDuration(importSinceFlag)
@@ -461,7 +461,7 @@ func parseDuration(s string) (time.Duration, error) {
 	if strings.HasSuffix(s, "d") {
 		days := strings.TrimSuffix(s, "d")
 		var d int
-		fmt.Sscanf(days, "%d", &d)
+		_, _ = fmt.Sscanf(days, "%d", &d)
 		return time.Duration(d) * 24 * time.Hour, nil
 	}
 	return time.ParseDuration(s)
