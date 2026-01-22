@@ -58,7 +58,7 @@ brews:
       name: homebrew-tap
       token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
     directory: Formula
-    homepage: "https://github.com/beng/reorg"
+    homepage: "https://github.com/ihavespoons/reorg"
     description: "Personal organization tool for managing areas, projects, and tasks"
     license: "MIT"
     install: |
@@ -68,7 +68,7 @@ brews:
 
 release:
   github:
-    owner: beng
+    owner: ihavespoons
     name: reorg
   draft: false
   prerelease: auto
