@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -102,12 +103,17 @@ To use Claude, provide credentials via one of these methods:
 
 // findClaudeOAuthToken looks for OAuth tokens from Claude Code or Claude Desktop
 func findClaudeOAuthToken() (string, error) {
+	// On macOS, check the keychain first (where Claude Code stores credentials)
+	if token, err := findKeychainCredentials(); err == nil && token != "" {
+		return token, nil
+	}
+
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return "", err
 	}
 
-	// Check Claude Code OAuth token locations
+	// Check Claude Code OAuth token locations (fallback for file-based storage)
 	tokenPaths := []string{
 		filepath.Join(home, ".claude", "oauth_token"),
 		filepath.Join(home, ".claude", "credentials.json"),
@@ -144,6 +150,97 @@ func findClaudeOAuthToken() (string, error) {
 	}
 
 	return "", fmt.Errorf("no OAuth token found")
+}
+
+// findKeychainCredentials reads Claude credentials from macOS keychain
+func findKeychainCredentials() (string, error) {
+	// Get current username for keychain lookup
+	currentUser := os.Getenv("USER")
+	if currentUser == "" {
+		currentUser = os.Getenv("LOGNAME")
+	}
+
+	// Try Claude Code credentials with username
+	if currentUser != "" {
+		token, err := readFromKeychainWithAccount("Claude Code-credentials", currentUser)
+		if err == nil && token != "" {
+			return token, nil
+		}
+	}
+
+	// Try different keychain service names used by Claude Code
+	keychainServices := []string{
+		"Claude Code-credentials",
+		"claude-code-credentials",
+		"anthropic",
+		"claude",
+	}
+
+	for _, service := range keychainServices {
+		token, err := readFromKeychain(service)
+		if err == nil && token != "" {
+			return token, nil
+		}
+	}
+
+	return "", fmt.Errorf("no keychain credentials found")
+}
+
+// readFromKeychainWithAccount reads a password from macOS keychain with specific account
+func readFromKeychainWithAccount(service, account string) (string, error) {
+	cmd := exec.Command("security", "find-generic-password", "-s", service, "-a", account, "-w")
+	output, err := cmd.Output()
+	if err != nil {
+		return "", err
+	}
+
+	return parseKeychainOutput(string(output))
+}
+
+// readFromKeychain reads a password from macOS keychain using security command
+func readFromKeychain(service string) (string, error) {
+	cmd := exec.Command("security", "find-generic-password", "-s", service, "-w")
+	output, err := cmd.Output()
+	if err != nil {
+		return "", err
+	}
+
+	return parseKeychainOutput(string(output))
+}
+
+// parseKeychainOutput extracts the OAuth token from keychain data
+func parseKeychainOutput(output string) (string, error) {
+	token := strings.TrimSpace(output)
+	if token == "" {
+		return "", fmt.Errorf("empty token")
+	}
+
+	// The keychain stores JSON with Claude OAuth credentials
+	if strings.HasPrefix(token, "{") {
+		// Try Claude Code format: {"claudeAiOauth":{"accessToken":"..."}}
+		var claudeCodeCreds struct {
+			ClaudeAiOauth struct {
+				AccessToken  string `json:"accessToken"`
+				RefreshToken string `json:"refreshToken"`
+				ExpiresAt    string `json:"expiresAt"`
+			} `json:"claudeAiOauth"`
+		}
+		if json.Unmarshal([]byte(token), &claudeCodeCreds) == nil && claudeCodeCreds.ClaudeAiOauth.AccessToken != "" {
+			return claudeCodeCreds.ClaudeAiOauth.AccessToken, nil
+		}
+
+		// Try simple format: {"accessToken":"..."}
+		var simpleCreds struct {
+			AccessToken  string `json:"accessToken"`
+			RefreshToken string `json:"refreshToken"`
+			ExpiresAt    string `json:"expiresAt"`
+		}
+		if json.Unmarshal([]byte(token), &simpleCreds) == nil && simpleCreds.AccessToken != "" {
+			return simpleCreds.AccessToken, nil
+		}
+	}
+
+	return token, nil
 }
 
 // readCredentialsFile reads API key from credentials file
