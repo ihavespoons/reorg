@@ -149,21 +149,113 @@ end replaceText
 }
 
 // ListRecentNotes returns notes modified within the given duration
+// This version uses AppleScript's 'whose' clause for potentially faster filtering
 func (r *Reader) ListRecentNotes(ctx context.Context, since time.Duration) ([]Note, error) {
-	notes, err := r.ListNotes(ctx)
+	// Calculate seconds ago for AppleScript (avoids locale-dependent date parsing)
+	secondsAgo := int(since.Seconds())
+
+	// AppleScript using 'whose' clause for filtering - may be faster if Notes supports it
+	script := fmt.Sprintf(`
+tell application "Notes"
+	set cutoffDate to (current date) - %d
+	set noteList to ""
+
+	-- Try to get recent notes using whose clause (faster if supported)
+	try
+		set recentNotes to every note whose modification date > cutoffDate
+	on error
+		-- Fallback: get all notes and filter manually
+		set recentNotes to {}
+		repeat with n in notes
+			try
+				if modification date of n > cutoffDate then
+					set end of recentNotes to n
+				end if
+			end try
+		end repeat
+	end try
+
+	repeat with n in recentNotes
+		try
+			set noteID to id of n
+			set noteName to name of n
+			set noteBody to body of n
+			set noteCreation to creation date of n
+			set noteMod to modification date of n
+
+			-- Get folder name
+			set noteFolder to "Notes"
+			try
+				set noteFolder to name of container of n
+			end try
+
+			-- Escape special characters for JSON
+			set noteName to my escapeForJSON(noteName)
+			set noteBody to my escapeForJSON(noteBody)
+			set escapedFolder to my escapeForJSON(noteFolder)
+
+			set noteJSON to "{\"id\":\"" & noteID & "\",\"name\":\"" & noteName & "\",\"body\":\"" & noteBody & "\",\"folder\":\"" & escapedFolder & "\",\"creation_date\":\"" & (noteCreation as «class isot» as string) & "\",\"modification_date\":\"" & (noteMod as «class isot» as string) & "\"}"
+
+			if noteList is "" then
+				set noteList to noteJSON
+			else
+				set noteList to noteList & "," & noteJSON
+			end if
+		end try
+	end repeat
+
+	return "[" & noteList & "]"
+end tell
+
+on escapeForJSON(theText)
+	set theText to my replaceText(theText, "\\", "\\\\")
+	set theText to my replaceText(theText, "\"", "\\\"")
+	set theText to my replaceText(theText, return, "\\n")
+	set theText to my replaceText(theText, linefeed, "\\n")
+	set theText to my replaceText(theText, tab, "\\t")
+	return theText
+end escapeForJSON
+
+on replaceText(theText, searchString, replacementString)
+	set AppleScript's text item delimiters to searchString
+	set theTextItems to every text item of theText
+	set AppleScript's text item delimiters to replacementString
+	set theText to theTextItems as string
+	set AppleScript's text item delimiters to ""
+	return theText
+end replaceText
+`, secondsAgo)
+
+	cmd := exec.CommandContext(ctx, "osascript", "-e", script)
+	output, err := cmd.Output()
 	if err != nil {
-		return nil, err
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			return nil, fmt.Errorf("osascript error: %s", string(exitErr.Stderr))
+		}
+		return nil, fmt.Errorf("failed to execute osascript: %w", err)
 	}
 
-	cutoff := time.Now().Add(-since)
-	var recent []Note
-	for _, note := range notes {
-		if note.ModDate.After(cutoff) {
-			recent = append(recent, note)
+	// Parse into intermediate struct with string dates
+	var jsonNotes []noteJSON
+	if err := json.Unmarshal(output, &jsonNotes); err != nil {
+		return nil, fmt.Errorf("failed to parse notes: %w (output: %s)", err, string(output))
+	}
+
+	// Convert to Note structs with proper date parsing
+	notes := make([]Note, len(jsonNotes))
+	for i, jn := range jsonNotes {
+		notes[i] = Note{
+			ID:           jn.ID,
+			Name:         jn.Name,
+			Body:         jn.Body,
+			Folder:       jn.Folder,
+			CreationDate: parseAppleScriptDate(jn.CreationDate),
+			ModDate:      parseAppleScriptDate(jn.ModDate),
+			PlainText:    stripHTML(jn.Body),
 		}
 	}
 
-	return recent, nil
+	return notes, nil
 }
 
 // ListNotesByFolder returns notes from a specific folder
