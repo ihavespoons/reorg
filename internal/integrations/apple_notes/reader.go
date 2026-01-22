@@ -15,9 +15,37 @@ type Note struct {
 	Name         string    `json:"name"`
 	Body         string    `json:"body"`
 	PlainText    string    `json:"plain_text"`
-	CreationDate time.Time `json:"creation_date"`
-	ModDate      time.Time `json:"modification_date"`
+	CreationDate time.Time `json:"-"`
+	ModDate      time.Time `json:"-"`
 	Folder       string    `json:"folder"`
+}
+
+// noteJSON is used for JSON unmarshaling with string dates
+type noteJSON struct {
+	ID           string `json:"id"`
+	Name         string `json:"name"`
+	Body         string `json:"body"`
+	Folder       string `json:"folder"`
+	CreationDate string `json:"creation_date"`
+	ModDate      string `json:"modification_date"`
+}
+
+// parseAppleScriptDate parses dates from AppleScript's ISO format (without timezone)
+func parseAppleScriptDate(s string) time.Time {
+	// AppleScript returns dates in local time without timezone: 2026-01-22T09:22:08
+	layouts := []string{
+		"2006-01-02T15:04:05",
+		"2006-01-02T15:04:05Z07:00",
+		time.RFC3339,
+	}
+
+	for _, layout := range layouts {
+		if t, err := time.ParseInLocation(layout, s, time.Local); err == nil {
+			return t
+		}
+	}
+
+	return time.Time{}
 }
 
 // Reader reads notes from Apple Notes via AppleScript
@@ -30,31 +58,42 @@ func NewReader() *Reader {
 
 // ListNotes returns all notes from Apple Notes
 func (r *Reader) ListNotes(ctx context.Context) ([]Note, error) {
-	// AppleScript to get all notes with their details
+	// AppleScript to get all notes by iterating through folders first
+	// This is more reliable and gets folder names correctly
 	script := `
 tell application "Notes"
 	set noteList to ""
-	repeat with n in notes
-		set noteID to id of n
-		set noteName to name of n
-		set noteBody to body of n
-		set noteCreation to creation date of n
-		set noteMod to modification date of n
-		set noteFolder to name of container of n
 
-		-- Escape special characters for JSON
-		set noteName to my escapeForJSON(noteName)
-		set noteBody to my escapeForJSON(noteBody)
-		set noteFolder to my escapeForJSON(noteFolder)
+	-- Iterate through all accounts and their folders
+	repeat with acc in accounts
+		repeat with fld in folders of acc
+			set folderName to name of fld
 
-		set noteJSON to "{\"id\":\"" & noteID & "\",\"name\":\"" & noteName & "\",\"body\":\"" & noteBody & "\",\"folder\":\"" & noteFolder & "\",\"creation_date\":\"" & (noteCreation as «class isot» as string) & "\",\"modification_date\":\"" & (noteMod as «class isot» as string) & "\"}"
+			repeat with n in notes of fld
+				try
+					set noteID to id of n
+					set noteName to name of n
+					set noteBody to body of n
+					set noteCreation to creation date of n
+					set noteMod to modification date of n
 
-		if noteList is "" then
-			set noteList to noteJSON
-		else
-			set noteList to noteList & "," & noteJSON
-		end if
+					-- Escape special characters for JSON
+					set noteName to my escapeForJSON(noteName)
+					set noteBody to my escapeForJSON(noteBody)
+					set escapedFolder to my escapeForJSON(folderName)
+
+					set noteJSON to "{\"id\":\"" & noteID & "\",\"name\":\"" & noteName & "\",\"body\":\"" & noteBody & "\",\"folder\":\"" & escapedFolder & "\",\"creation_date\":\"" & (noteCreation as «class isot» as string) & "\",\"modification_date\":\"" & (noteMod as «class isot» as string) & "\"}"
+
+					if noteList is "" then
+						set noteList to noteJSON
+					else
+						set noteList to noteList & "," & noteJSON
+					end if
+				end try
+			end repeat
+		end repeat
 	end repeat
+
 	return "[" & noteList & "]"
 end tell
 
@@ -86,14 +125,24 @@ end replaceText
 		return nil, fmt.Errorf("failed to execute osascript: %w", err)
 	}
 
-	var notes []Note
-	if err := json.Unmarshal(output, &notes); err != nil {
+	// Parse into intermediate struct with string dates
+	var jsonNotes []noteJSON
+	if err := json.Unmarshal(output, &jsonNotes); err != nil {
 		return nil, fmt.Errorf("failed to parse notes: %w (output: %s)", err, string(output))
 	}
 
-	// Extract plain text from HTML body
-	for i := range notes {
-		notes[i].PlainText = stripHTML(notes[i].Body)
+	// Convert to Note structs with proper date parsing
+	notes := make([]Note, len(jsonNotes))
+	for i, jn := range jsonNotes {
+		notes[i] = Note{
+			ID:           jn.ID,
+			Name:         jn.Name,
+			Body:         jn.Body,
+			Folder:       jn.Folder,
+			CreationDate: parseAppleScriptDate(jn.CreationDate),
+			ModDate:      parseAppleScriptDate(jn.ModDate),
+			PlainText:    stripHTML(jn.Body),
+		}
 	}
 
 	return notes, nil
