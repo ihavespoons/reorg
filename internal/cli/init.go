@@ -10,6 +10,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/spf13/cobra"
 
 	"github.com/ihavespoons/reorg/internal/domain"
@@ -167,8 +168,13 @@ func initGit(dir string) error {
 		return nil
 	}
 
-	// Initialize git repository using go-git
-	_, err := git.PlainInit(dir, false)
+	// Initialize git repository using go-git with "main" as default branch
+	_, err := git.PlainInitWithOptions(dir, &git.PlainInitOptions{
+		InitOptions: git.InitOptions{
+			DefaultBranch: plumbing.NewBranchReferenceName("main"),
+		},
+		Bare: false,
+	})
 	if err != nil {
 		return fmt.Errorf("failed to init git: %w", err)
 	}

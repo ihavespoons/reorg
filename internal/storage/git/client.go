@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
 )
 
@@ -44,7 +45,12 @@ func (c *Client) Init() error {
 		return nil // Already initialized
 	}
 
-	repo, err := git.PlainInit(c.rootDir, false)
+	repo, err := git.PlainInitWithOptions(c.rootDir, &git.PlainInitOptions{
+		InitOptions: git.InitOptions{
+			DefaultBranch: plumbing.NewBranchReferenceName("main"),
+		},
+		Bare: false,
+	})
 	if err != nil {
 		return fmt.Errorf("failed to init git repo: %w", err)
 	}
