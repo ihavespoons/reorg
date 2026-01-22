@@ -174,6 +174,76 @@ Respond with valid JSON only, no markdown formatting:
 	return &result, nil
 }
 
+// CategorizeWithContext analyzes text with knowledge of existing projects
+func (c *ClaudeClient) CategorizeWithContext(ctx context.Context, content string, existingProjects []ProjectContext) (*CategorizeResult, error) {
+	// Build project list for the prompt
+	projectList := ""
+	if len(existingProjects) > 0 {
+		projectList = "\n\nExisting projects you can assign this to:\n"
+		for _, p := range existingProjects {
+			projectList += fmt.Sprintf("- ID: %s, Title: \"%s\", Area: %s\n", p.ID, p.Title, p.Area)
+		}
+		projectList += "\nIf the content fits an existing project, use its ID in project_id. Otherwise, suggest a new project name in project_suggestion."
+	}
+
+	prompt := fmt.Sprintf(`Analyze the following content and categorize it for a personal organization system.
+
+Determine:
+1. Which area it belongs to: "work", "personal", or "life-admin"
+   - "work" = professional tasks, job-related, clients, colleagues, meetings
+   - "personal" = hobbies, personal projects, relationships, health, learning
+   - "life-admin" = bills, appointments, paperwork, household tasks, errands
+2. Match to an existing project if appropriate, or suggest a new project name
+3. Extract relevant tags
+4. Provide a brief summary
+5. Determine if it contains actionable items
+%s
+Content:
+%s
+
+Respond with valid JSON only, no markdown formatting:
+{
+  "area": "work|personal|life-admin",
+  "area_confidence": 0.0-1.0,
+  "project_id": "existing project ID if matched, or empty",
+  "project_suggestion": "new project name if no match, or empty",
+  "tags": ["tag1", "tag2"],
+  "summary": "brief summary",
+  "is_actionable": true|false
+}`, projectList, content)
+
+	response, err := c.client.Messages.New(ctx, anthropic.MessageNewParams{
+		Model:     anthropic.Model(c.model),
+		MaxTokens: 1024,
+		Messages: []anthropic.MessageParam{
+			anthropic.NewUserMessage(anthropic.NewTextBlock(prompt)),
+		},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("claude API error: %w", err)
+	}
+
+	// Extract text from response
+	var responseText string
+	for _, block := range response.Content {
+		if block.Type == "text" {
+			responseText = block.Text
+			break
+		}
+	}
+
+	if responseText == "" {
+		return nil, fmt.Errorf("empty response from Claude")
+	}
+
+	var result CategorizeResult
+	if err := json.Unmarshal([]byte(responseText), &result); err != nil {
+		return nil, fmt.Errorf("failed to parse response: %w (response: %s)", err, responseText)
+	}
+
+	return &result, nil
+}
+
 // ExtractTasks parses content and extracts actionable tasks
 func (c *ClaudeClient) ExtractTasks(ctx context.Context, content string) ([]ExtractedTask, error) {
 	prompt := fmt.Sprintf(`Extract actionable tasks from the following content.

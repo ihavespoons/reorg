@@ -19,6 +19,9 @@ type Client interface {
 	// Categorize analyzes text and returns categorization
 	Categorize(ctx context.Context, content string) (*CategorizeResult, error)
 
+	// CategorizeWithContext analyzes text with knowledge of existing projects
+	CategorizeWithContext(ctx context.Context, content string, existingProjects []ProjectContext) (*CategorizeResult, error)
+
 	// ExtractTasks parses content and extracts actionable tasks
 	ExtractTasks(ctx context.Context, content string) ([]ExtractedTask, error)
 
@@ -29,6 +32,13 @@ type Client interface {
 	Provider() Provider
 }
 
+// ProjectContext provides context about an existing project for AI matching
+type ProjectContext struct {
+	ID    string `json:"id"`
+	Title string `json:"title"`
+	Area  string `json:"area"`
+}
+
 // CategorizeResult contains the categorization of content
 type CategorizeResult struct {
 	// Area suggests which area this content belongs to (work, personal, life-admin)
@@ -37,7 +47,10 @@ type CategorizeResult struct {
 	// AreaConfidence is a score from 0-1 indicating confidence
 	AreaConfidence float64 `json:"area_confidence"`
 
-	// ProjectSuggestion suggests a project name if applicable
+	// ProjectID is the ID of an existing project if matched (empty if new project)
+	ProjectID string `json:"project_id,omitempty"`
+
+	// ProjectSuggestion suggests a project name if applicable (for new projects)
 	ProjectSuggestion string `json:"project_suggestion,omitempty"`
 
 	// Tags are suggested tags for the content

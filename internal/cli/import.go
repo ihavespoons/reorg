@@ -301,6 +301,9 @@ func processNotes(ctx context.Context, llmClient llm.Client, notes []genericNote
 	headerStyle := lipgloss.NewStyle().Bold(true)
 	labelStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("8"))
 
+	// Build context of existing projects for AI matching
+	existingProjects := buildProjectContext(ctx)
+
 	for i, note := range notes {
 		fmt.Printf("%s (%d/%d)\n", headerStyle.Render(note.Name), i+1, len(notes))
 
@@ -312,9 +315,9 @@ func processNotes(ctx context.Context, llmClient llm.Client, notes []genericNote
 		fmt.Println(labelStyle.Render(preview))
 		fmt.Println()
 
-		// Categorize with LLM
+		// Categorize with LLM (with existing project context)
 		fmt.Println("Analyzing...")
-		result, err := llmClient.Categorize(ctx, note.Content)
+		result, err := llmClient.CategorizeWithContext(ctx, note.Content, existingProjects)
 		if err != nil {
 			fmt.Printf("  Error: %v\n", err)
 			continue
@@ -322,8 +325,18 @@ func processNotes(ctx context.Context, llmClient llm.Client, notes []genericNote
 
 		// Show categorization
 		fmt.Printf("  %s %s (%.0f%% confidence)\n", labelStyle.Render("Area:"), result.Area, result.AreaConfidence*100)
-		if result.ProjectSuggestion != "" {
-			fmt.Printf("  %s %s\n", labelStyle.Render("Project:"), result.ProjectSuggestion)
+		if result.ProjectID != "" {
+			// Find project name for display
+			projectName := result.ProjectID
+			for _, p := range existingProjects {
+				if p.ID == result.ProjectID {
+					projectName = p.Title
+					break
+				}
+			}
+			fmt.Printf("  %s %s (existing)\n", labelStyle.Render("Project:"), projectName)
+		} else if result.ProjectSuggestion != "" {
+			fmt.Printf("  %s %s (new)\n", labelStyle.Render("Project:"), result.ProjectSuggestion)
 		}
 		if len(result.Tags) > 0 {
 			fmt.Printf("  %s %s\n", labelStyle.Render("Tags:"), strings.Join(result.Tags, ", "))
@@ -393,31 +406,43 @@ func createFromCategorization(ctx context.Context, note genericNote, cat *llm.Ca
 		}
 	}
 
-	// Determine project name
-	projectTitle := cat.ProjectSuggestion
-	if projectTitle == "" {
-		projectTitle = note.Name
-	}
-
-	// Check if project exists or create it
-	projects, _ := client.ListProjects(ctx, targetArea.ID)
 	var targetProject *domain.Project
-	for _, p := range projects {
-		if strings.EqualFold(p.Slug(), slugify(projectTitle)) {
-			targetProject = p
-			break
+
+	// Check if AI matched an existing project by ID
+	if cat.ProjectID != "" {
+		targetProject, err = client.GetProject(ctx, cat.ProjectID)
+		if err != nil {
+			// Project ID not found, fall through to create new
+			targetProject = nil
 		}
 	}
 
+	// If no matched project, try by name or create new
 	if targetProject == nil {
-		newProject := domain.NewProject(projectTitle, targetArea.ID)
-		newProject.Content = cat.Summary
-		for _, tag := range cat.Tags {
-			newProject.AddTag(tag)
+		projectTitle := cat.ProjectSuggestion
+		if projectTitle == "" {
+			projectTitle = note.Name
 		}
-		targetProject, err = client.CreateProject(ctx, newProject)
-		if err != nil {
-			return fmt.Errorf("failed to create project: %w", err)
+
+		// Check if project exists by slug
+		projects, _ := client.ListProjects(ctx, targetArea.ID)
+		for _, p := range projects {
+			if strings.EqualFold(p.Slug(), slugify(projectTitle)) {
+				targetProject = p
+				break
+			}
+		}
+
+		if targetProject == nil {
+			newProject := domain.NewProject(projectTitle, targetArea.ID)
+			newProject.Content = cat.Summary
+			for _, tag := range cat.Tags {
+				newProject.AddTag(tag)
+			}
+			targetProject, err = client.CreateProject(ctx, newProject)
+			if err != nil {
+				return fmt.Errorf("failed to create project: %w", err)
+			}
 		}
 	}
 
@@ -476,4 +501,30 @@ func slugify(s string) string {
 		}
 	}
 	return result.String()
+}
+
+// buildProjectContext creates a list of existing projects for AI matching
+func buildProjectContext(ctx context.Context) []llm.ProjectContext {
+	var projects []llm.ProjectContext
+
+	areas, err := client.ListAreas(ctx)
+	if err != nil {
+		return projects
+	}
+
+	for _, area := range areas {
+		areaProjects, err := client.ListProjects(ctx, area.ID)
+		if err != nil {
+			continue
+		}
+		for _, p := range areaProjects {
+			projects = append(projects, llm.ProjectContext{
+				ID:    p.ID,
+				Title: p.Title,
+				Area:  area.Title,
+			})
+		}
+	}
+
+	return projects
 }

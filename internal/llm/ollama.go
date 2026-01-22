@@ -121,6 +121,45 @@ Respond with JSON only:
 	return &result, nil
 }
 
+// CategorizeWithContext analyzes text with knowledge of existing projects
+func (c *OllamaClient) CategorizeWithContext(ctx context.Context, content string, existingProjects []ProjectContext) (*CategorizeResult, error) {
+	// Build project list for the prompt
+	projectList := ""
+	if len(existingProjects) > 0 {
+		projectList = "\n\nExisting projects:\n"
+		for _, p := range existingProjects {
+			projectList += fmt.Sprintf("- ID: %s, Title: \"%s\", Area: %s\n", p.ID, p.Title, p.Area)
+		}
+		projectList += "Match to existing project_id if appropriate, otherwise use project_suggestion."
+	}
+
+	prompt := fmt.Sprintf(`Analyze content and categorize it.
+
+Areas: "work", "personal", or "life-admin"
+- work = professional tasks, job-related
+- personal = hobbies, personal projects
+- life-admin = bills, appointments, errands
+%s
+Content: %s
+
+Respond with JSON only:
+{"area": "work", "area_confidence": 0.8, "project_id": "", "project_suggestion": "", "tags": [], "summary": "", "is_actionable": false}`, projectList, content)
+
+	response, err := c.generate(ctx, prompt)
+	if err != nil {
+		return nil, err
+	}
+
+	response = extractJSON(response)
+
+	var result CategorizeResult
+	if err := json.Unmarshal([]byte(response), &result); err != nil {
+		return nil, fmt.Errorf("failed to parse response: %w", err)
+	}
+
+	return &result, nil
+}
+
 // ExtractTasks parses content and extracts actionable tasks
 func (c *OllamaClient) ExtractTasks(ctx context.Context, content string) ([]ExtractedTask, error) {
 	prompt := fmt.Sprintf(`Extract tasks from this content. Return JSON only.
