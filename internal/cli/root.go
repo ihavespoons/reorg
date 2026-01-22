@@ -104,10 +104,8 @@ func initConfig() {
 	viper.SetEnvPrefix("REORG")
 	viper.AutomaticEnv()
 
-	// Read config file if it exists
-	if err := viper.ReadInConfig(); err == nil {
-		// Config loaded successfully
-	}
+	// Read config file if it exists (ignore error if not found)
+	_ = viper.ReadInConfig()
 
 	// Set data directory
 	if dataDir == "" {

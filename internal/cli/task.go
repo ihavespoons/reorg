@@ -134,8 +134,8 @@ func runTaskList(cmd *cobra.Command, args []string) error {
 	}
 
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(w, "STATUS\tTASK\tPROJECT\tPRIORITY\tDUE")
-	fmt.Fprintln(w, "------\t----\t-------\t--------\t---")
+	_, _ = fmt.Fprintln(w, "STATUS\tTASK\tPROJECT\tPRIORITY\tDUE")
+	_, _ = fmt.Fprintln(w, "------\t----\t-------\t--------\t---")
 
 	for _, t := range tasks {
 		// Get project name
@@ -167,7 +167,7 @@ func runTaskList(cmd *cobra.Command, args []string) error {
 			}
 		}
 
-		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n",
+		_, _ = fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n",
 			statusIcon,
 			t.Title,
 			projectName,
@@ -176,8 +176,7 @@ func runTaskList(cmd *cobra.Command, args []string) error {
 		)
 	}
 
-	w.Flush()
-	return nil
+	return w.Flush()
 }
 
 func runTaskCreate(cmd *cobra.Command, args []string) error {

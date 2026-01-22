@@ -72,7 +72,7 @@ func (c *OllamaClient) generate(ctx context.Context, prompt string) (string, err
 	if err != nil {
 		return "", fmt.Errorf("ollama request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)

@@ -46,7 +46,7 @@ func (s *Store) Git() *git.Client {
 // commit performs an auto-commit if enabled
 func (s *Store) commit(action string) {
 	if s.autoCommit && s.git != nil {
-		s.git.AutoCommit(action)
+		_ = s.git.AutoCommit(action)
 	}
 }
 
@@ -116,7 +116,7 @@ func (r *AreaRepo) Create(ctx context.Context, area *domain.Area) error {
 	// Write area file
 	if err := r.store.writer.WriteAreaToFile(r.areaFile(slug), area); err != nil {
 		// Clean up on failure
-		os.RemoveAll(areaDir)
+		_ = os.RemoveAll(areaDir)
 		return err
 	}
 
@@ -284,7 +284,7 @@ func (r *ProjectRepo) Create(ctx context.Context, project *domain.Project) error
 
 	// Write project file
 	if err := r.store.writer.WriteProjectToFile(r.projectFile(areaSlug, projectSlug), project); err != nil {
-		os.RemoveAll(projectDir)
+		_ = os.RemoveAll(projectDir)
 		return err
 	}
 

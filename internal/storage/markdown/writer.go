@@ -56,7 +56,7 @@ func (w *Writer) WriteAreaToFile(path string, area *domain.Area) error {
 	if err != nil {
 		return fmt.Errorf("failed to create file: %w", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	return w.WriteArea(f, area)
 }
@@ -98,7 +98,7 @@ func (w *Writer) WriteProjectToFile(path string, project *domain.Project) error 
 	if err != nil {
 		return fmt.Errorf("failed to create file: %w", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	return w.WriteProject(f, project)
 }
@@ -140,7 +140,7 @@ func (w *Writer) WriteTaskToFile(path string, task *domain.Task) error {
 	if err != nil {
 		return fmt.Errorf("failed to create file: %w", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	return w.WriteTask(f, task)
 }

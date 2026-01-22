@@ -38,7 +38,7 @@ func (p *Parser) ParseAreaFromFile(path string) (*domain.Area, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to open area file: %w", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	return p.ParseArea(f)
 }
 
@@ -59,7 +59,7 @@ func (p *Parser) ParseProjectFromFile(path string) (*domain.Project, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to open project file: %w", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	return p.ParseProject(f)
 }
 
@@ -80,7 +80,7 @@ func (p *Parser) ParseTaskFromFile(path string) (*domain.Task, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to open task file: %w", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	return p.ParseTask(f)
 }
 

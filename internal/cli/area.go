@@ -152,9 +152,10 @@ func runAreaShow(cmd *cobra.Command, args []string) error {
 		fmt.Println(labelStyle.Render("Projects:"))
 		for _, p := range projects {
 			statusIcon := "○"
-			if p.Status == domain.ProjectStatusCompleted {
+			switch p.Status {
+			case domain.ProjectStatusCompleted:
 				statusIcon = "✓"
-			} else if p.Status == domain.ProjectStatusOnHold {
+			case domain.ProjectStatusOnHold:
 				statusIcon = "⏸"
 			}
 			fmt.Printf("  %s %s\n", statusIcon, p.Title)

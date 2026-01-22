@@ -12,6 +12,8 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 
 	"github.com/beng/reorg/internal/domain"
 	"github.com/beng/reorg/internal/integrations/apple_notes"
@@ -387,7 +389,8 @@ func createFromCategorization(ctx context.Context, note genericNote, cat *llm.Ca
 
 	if targetArea == nil {
 		// Create the area
-		newArea := domain.NewArea(strings.Title(cat.Area))
+		titleCaser := cases.Title(language.English)
+		newArea := domain.NewArea(titleCaser.String(cat.Area))
 		targetArea, err = client.CreateArea(ctx, newArea)
 		if err != nil {
 			return fmt.Errorf("failed to create area: %w", err)
