@@ -1,9 +1,11 @@
-.PHONY: build install clean test lint run
+.PHONY: build build-plugins install clean test lint run
 
 # Build variables
 BINARY_NAME=reorg
 BUILD_DIR=bin
 CMD_DIR=cmd/reorg
+PLUGIN_APPLE_NOTES=reorg-plugin-apple-notes
+PLUGIN_OBSIDIAN=reorg-plugin-obsidian
 
 # Go variables
 GOCMD=go
@@ -19,6 +21,18 @@ build:
 	@mkdir -p $(BUILD_DIR)
 	$(GOBUILD) -o $(BUILD_DIR)/$(BINARY_NAME) ./$(CMD_DIR)
 	@echo "Built $(BUILD_DIR)/$(BINARY_NAME)"
+
+# Build plugins
+build-plugins:
+	@echo "Building plugins..."
+	@mkdir -p $(BUILD_DIR)
+	$(GOBUILD) -o $(BUILD_DIR)/$(PLUGIN_APPLE_NOTES) ./cmd/reorg-plugin-apple-notes
+	$(GOBUILD) -o $(BUILD_DIR)/$(PLUGIN_OBSIDIAN) ./cmd/reorg-plugin-obsidian
+	@echo "Built $(BUILD_DIR)/$(PLUGIN_APPLE_NOTES)"
+	@echo "Built $(BUILD_DIR)/$(PLUGIN_OBSIDIAN)"
+
+# Build everything
+build-all: build build-plugins
 
 # Install to GOPATH/bin
 install:
@@ -79,6 +93,8 @@ quicktest: build
 help:
 	@echo "Available targets:"
 	@echo "  build         - Build the application"
+	@echo "  build-plugins - Build plugin binaries"
+	@echo "  build-all     - Build application and plugins"
 	@echo "  install       - Install to GOPATH/bin"
 	@echo "  clean         - Clean build artifacts"
 	@echo "  test          - Run tests"

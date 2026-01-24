@@ -25,8 +25,40 @@ builds:
       - -X main.commit={{.Commit}}
       - -X main.date={{.Date}}
 
+  - id: apple-notes-plugin
+    main: ./cmd/reorg-plugin-apple-notes
+    binary: reorg-plugin-apple-notes
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - darwin  # Apple Notes only available on macOS
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+
+  - id: obsidian-plugin
+    main: ./cmd/reorg-plugin-obsidian
+    binary: reorg-plugin-obsidian
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+
 archives:
   - id: default
+    builds:
+      - reorg
+      - apple-notes-plugin
+      - obsidian-plugin
     formats:
       - tar.gz
     format_overrides:

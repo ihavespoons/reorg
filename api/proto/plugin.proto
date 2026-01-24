@@ -1,0 +1,351 @@
+syntax = "proto3";
+
+package reorg.plugin.v1;
+
+option go_package = "github.com/ihavespoons/reorg/pkg/plugin/proto";
+
+import "google/protobuf/timestamp.proto";
+
+// ============================================================================
+// Plugin Service - implemented by plugins, called by host
+// ============================================================================
+
+service ReorgPlugin {
+  // GetManifest returns the plugin's metadata and capabilities
+  rpc GetManifest(Empty) returns (PluginManifest);
+
+  // Configure sets up the plugin with host-provided configuration
+  rpc Configure(ConfigureRequest) returns (ConfigureResponse);
+
+  // Execute runs the plugin's main logic
+  rpc Execute(ExecuteRequest) returns (ExecuteResponse);
+
+  // Shutdown gracefully stops the plugin
+  rpc Shutdown(Empty) returns (Empty);
+}
+
+// ============================================================================
+// Host Service - implemented by host, called by plugins
+// ============================================================================
+
+service ReorgHost {
+  // Area operations
+  rpc ListAreas(ListAreasRequest) returns (ListAreasResponse);
+  rpc GetArea(GetAreaRequest) returns (GetAreaResponse);
+  rpc CreateArea(CreateAreaRequest) returns (CreateAreaResponse);
+
+  // Project operations
+  rpc ListProjects(ListProjectsRequest) returns (ListProjectsResponse);
+  rpc ListAllProjects(Empty) returns (ListAllProjectsResponse);
+  rpc GetProject(GetProjectRequest) returns (GetProjectResponse);
+  rpc CreateProject(CreateProjectRequest) returns (CreateProjectResponse);
+
+  // Task operations
+  rpc ListTasks(ListTasksRequest) returns (ListTasksResponse);
+  rpc CreateTask(CreateTaskRequest) returns (CreateTaskResponse);
+
+  // LLM operations (proxied through host for centralized API key management)
+  rpc CategorizeWithContext(CategorizeRequest) returns (CategorizeResponse);
+  rpc ExtractTasks(ExtractTasksRequest) returns (ExtractTasksResponse);
+
+  // State persistence (per-plugin state storage)
+  rpc GetState(GetStateRequest) returns (GetStateResponse);
+  rpc SetState(SetStateRequest) returns (SetStateResponse);
+  rpc DeleteState(DeleteStateRequest) returns (DeleteStateResponse);
+}
+
+// ============================================================================
+// Common types
+// ============================================================================
+
+message Empty {}
+
+message PluginManifest {
+  string name = 1;
+  string version = 2;
+  string description = 3;
+  string author = 4;
+
+  // Default cron schedule (e.g., "*/15 * * * *" for every 15 minutes)
+  string schedule = 5;
+
+  // Capabilities this plugin provides
+  repeated string capabilities = 6;
+
+  // Configuration schema (JSON Schema format)
+  string config_schema = 7;
+}
+
+// ============================================================================
+// Plugin Service messages
+// ============================================================================
+
+message ConfigureRequest {
+  // Configuration key-value pairs from user config
+  map<string, string> config = 1;
+
+  // Directory for plugin state storage
+  string state_dir = 2;
+
+  // Port for the host gRPC server (for plugin callbacks)
+  uint32 host_server_port = 3;
+}
+
+message ConfigureResponse {
+  bool success = 1;
+  string error = 2;
+}
+
+message ExecuteRequest {
+  // Whether this is a dry run (don't make changes)
+  bool dry_run = 1;
+
+  // Optional parameters passed from CLI
+  map<string, string> params = 2;
+}
+
+message ExecuteResponse {
+  bool success = 1;
+  string error = 2;
+
+  // Summary of what was done
+  ExecuteSummary summary = 3;
+
+  // Detailed results
+  repeated ExecuteResult results = 4;
+}
+
+message ExecuteSummary {
+  int32 items_processed = 1;
+  int32 items_imported = 2;
+  int32 items_skipped = 3;
+  int32 items_failed = 4;
+  string message = 5;
+}
+
+message ExecuteResult {
+  string id = 1;
+  string name = 2;
+  string action = 3;  // "imported", "skipped", "failed"
+  string message = 4;
+  map<string, string> metadata = 5;
+}
+
+// ============================================================================
+// Host Service messages - Areas
+// ============================================================================
+
+message Area {
+  string id = 1;
+  string title = 2;
+  string content = 3;
+  repeated string tags = 4;
+  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp updated_at = 6;
+}
+
+message ListAreasRequest {}
+
+message ListAreasResponse {
+  repeated Area areas = 1;
+}
+
+message GetAreaRequest {
+  string id = 1;
+}
+
+message GetAreaResponse {
+  Area area = 1;
+}
+
+message CreateAreaRequest {
+  string title = 1;
+  string content = 2;
+  repeated string tags = 3;
+}
+
+message CreateAreaResponse {
+  Area area = 1;
+}
+
+// ============================================================================
+// Host Service messages - Projects
+// ============================================================================
+
+message Project {
+  string id = 1;
+  string title = 2;
+  string area_id = 3;
+  string content = 4;
+  ProjectStatus status = 5;
+  repeated string tags = 6;
+  google.protobuf.Timestamp due_date = 7;
+  google.protobuf.Timestamp created_at = 8;
+  google.protobuf.Timestamp updated_at = 9;
+}
+
+enum ProjectStatus {
+  PROJECT_STATUS_UNSPECIFIED = 0;
+  PROJECT_STATUS_ACTIVE = 1;
+  PROJECT_STATUS_ON_HOLD = 2;
+  PROJECT_STATUS_COMPLETED = 3;
+  PROJECT_STATUS_ARCHIVED = 4;
+}
+
+message ListProjectsRequest {
+  string area_id = 1;
+}
+
+message ListProjectsResponse {
+  repeated Project projects = 1;
+}
+
+message ListAllProjectsResponse {
+  repeated Project projects = 1;
+}
+
+message GetProjectRequest {
+  string id = 1;
+}
+
+message GetProjectResponse {
+  Project project = 1;
+}
+
+message CreateProjectRequest {
+  string title = 1;
+  string area_id = 2;
+  string content = 3;
+  repeated string tags = 4;
+}
+
+message CreateProjectResponse {
+  Project project = 1;
+}
+
+// ============================================================================
+// Host Service messages - Tasks
+// ============================================================================
+
+message Task {
+  string id = 1;
+  string title = 2;
+  string project_id = 3;
+  string area_id = 4;
+  string content = 5;
+  TaskStatus status = 6;
+  Priority priority = 7;
+  repeated string tags = 8;
+  google.protobuf.Timestamp due_date = 9;
+  google.protobuf.Timestamp created_at = 10;
+  google.protobuf.Timestamp updated_at = 11;
+}
+
+enum TaskStatus {
+  TASK_STATUS_UNSPECIFIED = 0;
+  TASK_STATUS_TODO = 1;
+  TASK_STATUS_IN_PROGRESS = 2;
+  TASK_STATUS_BLOCKED = 3;
+  TASK_STATUS_DONE = 4;
+  TASK_STATUS_CANCELLED = 5;
+}
+
+enum Priority {
+  PRIORITY_UNSPECIFIED = 0;
+  PRIORITY_LOW = 1;
+  PRIORITY_MEDIUM = 2;
+  PRIORITY_HIGH = 3;
+  PRIORITY_URGENT = 4;
+}
+
+message ListTasksRequest {
+  string project_id = 1;
+}
+
+message ListTasksResponse {
+  repeated Task tasks = 1;
+}
+
+message CreateTaskRequest {
+  string title = 1;
+  string project_id = 2;
+  string area_id = 3;
+  string content = 4;
+  Priority priority = 5;
+  repeated string tags = 6;
+}
+
+message CreateTaskResponse {
+  Task task = 1;
+}
+
+// ============================================================================
+// Host Service messages - LLM
+// ============================================================================
+
+message ProjectContext {
+  string id = 1;
+  string title = 2;
+  string area = 3;
+}
+
+message CategorizeRequest {
+  string content = 1;
+  repeated ProjectContext existing_projects = 2;
+}
+
+message CategorizeResponse {
+  string area = 1;
+  double area_confidence = 2;
+  string project_id = 3;         // ID of existing project if matched
+  string project_suggestion = 4; // Suggested name for new project
+  repeated string tags = 5;
+  string summary = 6;
+  bool is_actionable = 7;
+}
+
+message ExtractedTask {
+  string title = 1;
+  string description = 2;
+  string priority = 3;
+  string due_date = 4;
+  repeated string tags = 5;
+}
+
+message ExtractTasksRequest {
+  string content = 1;
+}
+
+message ExtractTasksResponse {
+  repeated ExtractedTask tasks = 1;
+}
+
+// ============================================================================
+// Host Service messages - State
+// ============================================================================
+
+message GetStateRequest {
+  string key = 1;
+}
+
+message GetStateResponse {
+  bytes value = 1;
+  bool found = 2;
+}
+
+message SetStateRequest {
+  string key = 1;
+  bytes value = 2;
+}
+
+message SetStateResponse {
+  bool success = 1;
+}
+
+message DeleteStateRequest {
+  string key = 1;
+}
+
+message DeleteStateResponse {
+  bool success = 1;
+}

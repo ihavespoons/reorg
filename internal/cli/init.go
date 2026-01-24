@@ -210,15 +210,34 @@ git:
   auto_commit: true
   commit_message_prefix: "reorg: "
 
-# LLM settings (Phase 2)
+# LLM settings
 # llm:
 #   provider: claude
 #   api_key: ${ANTHROPIC_API_KEY}
 
-# Integrations (Phase 2)
-# integrations:
-#   apple_notes:
-#     enabled: true
+# Plugin settings
+plugins:
+  # Directory containing plugin executables
+  dir: ~/.reorg/plugins
+
+  # Apple Notes importer plugin
+  apple-notes-importer:
+    enabled: true
+    # schedule: "*/15 * * * *"  # Override default schedule (every 15 min)
+    config:
+      since: "24h"              # Import notes from last 24 hours
+      auto: "true"              # Auto-accept AI categorizations
+      # folders: ""             # Comma-separated folders to import
+
+  # Obsidian importer plugin
+  obsidian-importer:
+    enabled: false
+    # schedule: "0 */6 * * *"   # Override default schedule (every 6 hours)
+    config:
+      vault_path: ""            # Path to Obsidian vault (required)
+      since: "24h"              # Import notes from last 24 hours
+      # folders: ""             # Comma-separated folders to import
+      # skip_dirs: ".obsidian,.git,.trash"
 
 # CLI settings
 cli:
